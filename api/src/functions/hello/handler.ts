@@ -11,4 +11,12 @@ const hello: ValidatedEventAPIGatewayProxyEvent<typeof schema> = async (event) =
   });
 };
 
+const helloGet: ValidatedEventAPIGatewayProxyEvent<typeof schema> = async (event) => {
+  return formatJSONResponse({
+    message: `Hello GET, welcome to the exciting Serverless world!`,
+    // event,
+  });
+};
+
 export const main = middyfy(hello);
+export const mainGet = middyfy(helloGet);

@@ -10,5 +10,7 @@ jspm_packages
 
 # custom
 .env
-/code
+**/code
+**/dist
+**/lib
 cmd.txt

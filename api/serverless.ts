@@ -1,14 +1,16 @@
 import type { AWS } from '@serverless/typescript';
 
-import hello from '@functions/hello';
+import { helloGet, helloPost } from '@functions/hello';
 
 const serverlessConfiguration: AWS = {
   service: 'ts-bookstore',
   frameworkVersion: '3',
-  plugins: ['serverless-esbuild'],
+  plugins: ['serverless-esbuild', 'serverless-offline', 'serverless-dotenv-plugin'],
   provider: {
     name: 'aws',
     runtime: 'nodejs14.x',
+    region: 'eu-central-1',
+    stage: "${opt:stage, 'dev'}",
     apiGateway: {
       minimumCompressionSize: 1024,
       shouldStartNameWithService: true,
@@ -19,7 +21,7 @@ const serverlessConfiguration: AWS = {
     },
   },
   // import the function via paths
-  functions: { hello },
+  functions: { helloGet, helloPost },
   package: { individually: true },
   custom: {
     esbuild: {
@@ -32,7 +34,28 @@ const serverlessConfiguration: AWS = {
       platform: 'node',
       concurrency: 10,
     },
+    // dynamodb: {
+    //   stages: ['dev'],
+    //   start: {
+    //     port: 8008,
+    //     inMemory: true,
+    //     heapInitial: '200m',
+    //     heapMax: '1g',
+    //     migrate: true,
+    //     seed: true,
+    //     convertEmptyValues: true,
+    //     // Uncomment only if you already have a DynamoDB running locally
+    //     // noStart: true
+    //   },
+    // },
+    ['serverless-offline']: {
+      httpPort: 3000,
+      babelOptions: {
+        presets: ['env'],
+      },
+    },
   },
+  resources: {},
 };
 
 module.exports = serverlessConfiguration;
