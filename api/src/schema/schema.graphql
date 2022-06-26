@@ -44,6 +44,10 @@ type Mutation {
   createOrder(newOrder: OrderInput): Boolean!
 }
 
+type Subscription {
+  onCreatedBook(author: String!): Book @aws_subscribe(mutations: ["createBook"])
+}
+
 input OrderInput {
   items: [OrderItemInput]
 }
