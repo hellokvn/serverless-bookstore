@@ -1,4 +1,4 @@
-service: ts-bookstore
+service: bookstore
 frameworkVersion: "3"
 
 provider:
@@ -31,19 +31,27 @@ custom:
   appSync:
     name: BookStoreAppSyncAPI
     authenticationType: AMAZON_COGNITO_USER_POOLS
+    additionalAuthenticationProviders:
+      - authenticationType: AWS_IAM
     userPoolConfig:
       awsRegion: eu-central-1
-      defaultAction: Allow
+      defaultAction: ALLOW
       userPoolId: !Ref cognitoUserPool
     mappingTemplatesLocation: mapping-templates
-    mappingTemplates:
-      - type: Query
+    mappingTemplates: 
+      - type: Query 
         field: getBookById
-        dataSource: ""
+        dataSource: booksTable
+      - type: Query 
+        field: listBooks
+        dataSource: booksTable
+      - type: Mutation 
+        field: createBook
+        dataSource: booksTable
     dataSources:
       - type: AMAZON_DYNAMODB
         name: booksTable
-        config:
+        config: 
           tableName: !Ref booksTable
 
 resources:
@@ -61,7 +69,7 @@ resources:
     cognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
-        UserPoolName: kvn-bookstore-${self:provider.stage}
+        UserPoolName: bookstore-${self:provider.stage}
         MfaConfiguration: "OFF"
         UsernameAttributes:
           - email
@@ -109,7 +117,6 @@ resources:
         UserPoolId: !Ref cognitoUserPool
         Domain: kvn-bookstore-${self:provider.stage}
 
-    # Cognito user pool admin group
     cognitoAdminGroup:
       Type: "AWS::Cognito::UserPoolGroup"
       Properties: 
@@ -119,7 +126,6 @@ resources:
         RoleArn: !GetAtt cognitoAdminIAMRole.Arn
         UserPoolId: !Ref cognitoUserPool
 
-    # Congnito admin IAM role
     cognitoAdminIAMRole:
       Type: "AWS::IAM::Role"
       Properties: 
@@ -144,7 +150,7 @@ resources:
                   Resource:
                     - !GetAtt booksTable.Arn
                     - !GetAtt orderTable.Arn
-    # Cognito user pool user group
+    
     cognitoCustomerGroup:
       Type: "AWS::Cognito::UserPoolGroup"
       Properties: 
@@ -154,7 +160,6 @@ resources:
         RoleArn: !GetAtt cognitoCustomerIAMRole.Arn
         UserPoolId: !Ref cognitoUserPool
 
-    # Congnito admin IAM role
     cognitoCustomerIAMRole:
       Type: "AWS::IAM::Role"
       Properties: 

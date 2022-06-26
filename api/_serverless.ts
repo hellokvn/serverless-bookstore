@@ -3,7 +3,7 @@ import type { AWS } from '@serverless/typescript';
 import { helloGet, helloPost } from './src/functions/hello';
 
 const serverlessConfiguration: AWS = {
-  service: 'ts-bookstore',
+  service: 'bookstore',
   frameworkVersion: '3',
   plugins: ['serverless-esbuild', 'serverless-offline', 'serverless-dotenv-plugin'],
   provider: {
