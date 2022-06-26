@@ -1,3 +1,5 @@
+org: hellokvn
+console: true
 service: bookstore
 frameworkVersion: "3"
 
@@ -7,6 +9,11 @@ provider:
   lambdaHashingVersion: 20201221
   stage: ${opt:stage, 'dev'} 
   region: eu-central-1
+
+# Parameters:
+#   UserEmail:
+#     Type: hellokevinvogel@gmail.com
+#     Description: Test user's email
 
 functions:
   helloPost:
@@ -30,6 +37,7 @@ plugins:
 custom:
   appSync:
     name: BookStoreAppSyncAPI
+    schema: src/schema/schema.graphql
     authenticationType: AMAZON_COGNITO_USER_POOLS
     additionalAuthenticationProviders:
       - authenticationType: AWS_IAM
@@ -85,6 +93,48 @@ resources:
             RequireNumbers: false
             RequireSymbols: false
             RequireUppercase: false
+
+    # ADMIN
+
+    cognitoUserPoolUserAdmin:
+      Type: AWS::Cognito::UserPoolUser
+      Properties:
+        Username: hellokevinvogel@gmail.com
+        UserPoolId: !Ref cognitoUserPool
+        DesiredDeliveryMediums: 
+          - EMAIL
+        ForceAliasCreation: true
+        UserAttributes:
+          - Name: email
+            Value: hellokevinvogel@gmail.com
+    
+    cognitoUserPoolUserAdminGroupAttachment:
+      Type: AWS::Cognito::UserPoolUserToGroupAttachment
+      Properties: 
+        GroupName: !Ref cognitoAdminGroup
+        Username: !Ref cognitoUserPoolUserAdmin
+        UserPoolId: !Ref cognitoUserPool
+    
+    # Customer
+
+    cognitoUserPoolUserCustomer:
+      Type: AWS::Cognito::UserPoolUser
+      Properties:
+        Username: hellokevinvogel+c@gmail.com
+        UserPoolId: !Ref cognitoUserPool
+        DesiredDeliveryMediums: 
+          - EMAIL
+        ForceAliasCreation: true
+        UserAttributes:
+          - Name: email
+            Value: hellokevinvogel+c@gmail.com
+    
+    cognitoUserPoolUserCustomerGroupAttachment:
+      Type: AWS::Cognito::UserPoolUserToGroupAttachment
+      Properties: 
+        GroupName: !Ref cognitoCustomerGroup
+        Username: !Ref cognitoUserPoolUserCustomer
+        UserPoolId: !Ref cognitoUserPool
 
     cognitoUserPoolWebClient:
       Type: AWS::Cognito::UserPoolClient
@@ -204,10 +254,10 @@ resources:
           - Key: stage
             Value: ${self:provider.stage}
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: bookId
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: bookId
             KeyType: HASH
 
     orderTable:

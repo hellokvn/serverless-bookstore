@@ -2,11 +2,14 @@
     "private": true,
     "name": "serverless-bookstore",
     "workspaces": [
-        "api"
+        "api",
+        "shared",
+        "frontend"
     ],
     "scripts": {
         "api": "yarn workspace api",
-        "shared": "yarn workspace shared"
+        "shared": "yarn workspace shared",
+        "frontend": "yarn workspace frontend"
     },
     "devDependencies": {
         "@types/node": "^18.0.0",
