@@ -1,5 +1,5 @@
 import schema from './schema';
-import { handlerPath } from '@libs/handler-resolver';
+import { handlerPath } from '../../libs/handler-resolver';
 
 export const helloPost = {
   handler: `${handlerPath(__dirname)}/handler.main`,

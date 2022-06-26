@@ -4,6 +4,7 @@
   "description": "Serverless aws-nodejs-typescript template",
   "main": "serverless.ts",
   "scripts": {
+    "deploy": "sls deploy",
     "offline": "sls offline",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,7 +14,8 @@
   "dependencies": {
     "@middy/core": "^2.5.3",
     "@middy/http-json-body-parser": "^2.5.3",
-    "json-schema-to-ts": "^2.5.3"
+    "json-schema-to-ts": "^2.5.3",
+    "serverless-appsync-plugin": "^1.13.0"
   },
   "devDependencies": {
     "@serverless/typescript": "^3.0.0",
@@ -22,6 +24,7 @@
     "serverless": "^3.0.0",
     "serverless-dotenv-plugin": "^4.0.1",
     "serverless-esbuild": "^1.23.3",
+    "serverless-iam-roles-per-function": "^3.2.0",
     "serverless-offline": "^8.8.0"
   },
   "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",

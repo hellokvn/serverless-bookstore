@@ -1,0 +1,239 @@
+service: ts-bookstore
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  lambdaHashingVersion: 20201221
+  stage: ${opt:stage, 'dev'} 
+  region: eu-central-1
+
+functions:
+  helloPost:
+    handler: src/functions/handler.main
+    events:
+      - http:
+          method: post
+          path: hello
+  helloGet:
+    handler: src/functions/handler.mainGet
+    events:
+      - http:
+          method: get
+          path: hello
+
+plugins:
+  - serverless-iam-roles-per-function
+  - serverless-offline
+  - serverless-appsync-plugin
+
+custom:
+  appSync:
+    name: BookStoreAppSyncAPI
+    authenticationType: AMAZON_COGNITO_USER_POOLS
+    userPoolConfig:
+      awsRegion: eu-central-1
+      defaultAction: Allow
+      userPoolId: !Ref cognitoUserPool
+    mappingTemplatesLocation: mapping-templates
+    mappingTemplates:
+      - type: Query
+        field: getBookById
+        dataSource: ""
+    dataSources:
+      - type: AMAZON_DYNAMODB
+        name: booksTable
+        config:
+          tableName: !Ref booksTable
+
+resources:
+  Resources:
+
+# --- Cognito ---
+
+    userPoolArnParam:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /notes/${self:provider.stage}/userPoolArn
+        Type: String
+        Value: !GetAtt cognitoUserPool.Arn
+
+    cognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: kvn-bookstore-${self:provider.stage}
+        MfaConfiguration: "OFF"
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        Schema:
+        - Name: 'email'
+          Required: true
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 6
+            RequireLowercase: false
+            RequireNumbers: false
+            RequireSymbols: false
+            RequireUppercase: false
+
+    cognitoUserPoolWebClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        UserPoolId: !Ref cognitoUserPool
+        ClientName: web-client-${self:provider.stage}
+        GenerateSecret: false
+        DefaultRedirectURI: http://localhost:3000
+        RefreshTokenValidity: 30
+        AllowedOAuthFlowsUserPoolClient: true
+        CallbackURLs:
+          - http://localhost:3000
+        AllowedOAuthFlows:
+          - implicit
+        AllowedOAuthScopes:
+          - phone
+          - email
+          - openid
+        SupportedIdentityProviders:
+          - COGNITO
+        ExplicitAuthFlows:
+          - ALLOW_ADMIN_USER_PASSWORD_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+          - ALLOW_CUSTOM_AUTH
+          - ALLOW_USER_SRP_AUTH
+    
+    cognitoUserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        UserPoolId: !Ref cognitoUserPool
+        Domain: kvn-bookstore-${self:provider.stage}
+
+    # Cognito user pool admin group
+    cognitoAdminGroup:
+      Type: "AWS::Cognito::UserPoolGroup"
+      Properties: 
+        Description: "Admin users belong to this group"
+        GroupName: "admin"
+        Precedence: 0
+        RoleArn: !GetAtt cognitoAdminIAMRole.Arn
+        UserPoolId: !Ref cognitoUserPool
+
+    # Congnito admin IAM role
+    cognitoAdminIAMRole:
+      Type: "AWS::IAM::Role"
+      Properties: 
+        RoleName: "bookstore-admin-role"
+        AssumeRolePolicyDocument: 
+          Version: "2012-10-17"
+          Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Federated:
+                - "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity" 
+        Policies: 
+          - PolicyName: "bookstore-admin-role-policy"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "dynamodb:*"
+                  Resource:
+                    - !GetAtt booksTable.Arn
+                    - !GetAtt orderTable.Arn
+    # Cognito user pool user group
+    cognitoCustomerGroup:
+      Type: "AWS::Cognito::UserPoolGroup"
+      Properties: 
+        Description: "Customers belong to this group"
+        GroupName: "customer"
+        Precedence: 1
+        RoleArn: !GetAtt cognitoCustomerIAMRole.Arn
+        UserPoolId: !Ref cognitoUserPool
+
+    # Congnito admin IAM role
+    cognitoCustomerIAMRole:
+      Type: "AWS::IAM::Role"
+      Properties: 
+        RoleName: "bookstore-customer-role"
+        AssumeRolePolicyDocument: 
+          Version: "2012-10-17"
+          Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Federated:
+                - "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity" 
+        Policies: 
+          - PolicyName: "bookstore-customer-policy"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "dynamodb:*"
+                  Resource:
+                    - !GetAtt orderTable.Arn
+                - Effect: "Allow"
+                  Action:
+                    - "dynamodb:GetItem"
+                    - "dynamodb:BatchGetItem"
+                    - "dynamodb:Query"
+                  Resource:
+                    - !GetAtt booksTable.Arn
+
+# --- DynamoDB ---
+
+    booksTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: books-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        Tags:
+          - Key: Name
+            Value: books-table
+          - Key: stage
+            Value: ${self:provider.stage}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+
+    orderTable:
+      Type: AWS::DynamoDB::Table
+      Properties: 
+        AttributeDefinitions: 
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: orderId
+            AttributeType: S
+          - AttributeName: bookId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        BillingMode: PAY_PER_REQUEST
+        KeySchema: 
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: orderId
+            KeyType: RANGE
+        GlobalSecondaryIndexes: 
+          - IndexName: byOrder
+            KeySchema: 
+            - AttributeName: bookId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+            Projection: 
+              ProjectionType: ALL
+        Tags: 
+          - Key: Name
+            Value: order-table
+          - Key: stage
+            Value: ${self:provider.stage}
