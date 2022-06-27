@@ -2,15 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { API, graphqlOperation } from 'aws-amplify';
 import { withAuthenticator, AmplifySignOut } from '@aws-amplify/ui-react';
 import { getBookById } from './graphql/queries/book';
+import { onCreatedBook } from './graphql/subscriptions/book';
 import './App.css';
-
-const SUBSCRIPTION = `
-  subscription OnCreatedBook($author: String!) {
-    onCreatedBook(author: $author) {
-        author
-    }
-  }
-`;
 
 function App() {
   const [book, setBook] = useState(null);
@@ -18,7 +11,8 @@ function App() {
   useEffect(() => {
     (async () => {
       try {
-        API.graphql(graphqlOperation(SUBSCRIPTION, { author: 'test' })).subscribe({
+        console.log('sub');
+        API.graphql(graphqlOperation(onCreatedBook, { author: 'test' })).subscribe({
           next: (data) => {
             console.log('SUBSCRIBED EVENT', { data });
           },
